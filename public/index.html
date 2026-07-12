@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Postman Lite</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <div class="app">
+
+    <!-- ============ ICON BAR ============ -->
+    <nav class="icon-bar">
+      <div class="icon-btn active" data-panel="collections" title="Collections">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+        </svg>
+      </div>
+      <div class="icon-btn" data-panel="environments" title="Environments">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+      </div>
+      <div class="icon-btn" data-panel="history" title="History">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </div>
+      <div class="icon-bar-spacer"></div>
+      <div class="icon-btn" id="settingsBtn" title="Settings">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+      </div>
+    </nav>
+
+    <!-- ============ SLIDING SIDE PANEL ============ -->
+    <aside class="side-panel" id="sidePanel">
+
+      <!-- Collections Panel -->
+      <div class="side-panel-content active" id="collections-panel">
+        <div class="panel-header">
+          <h3>Collections</h3>
+          <button id="newCollectionBtn" class="btn-icon" title="New Collection">+</button>
+        </div>
+        <div class="search-bar">
+          <input type="text" id="collectionSearch" placeholder="Search collections..." />
+        </div>
+        <div id="newCollectionRow" class="inline-create-row" style="display:none;">
+          <input type="text" id="newCollectionInput" placeholder="Collection name" />
+          <button id="confirmNewCollectionBtn" class="btn-small btn-confirm">✓</button>
+          <button id="cancelNewCollectionBtn" class="btn-small btn-cancel">✕</button>
+        </div>
+        <div id="collectionsList" class="scrollable"></div>
+      </div>
+
+      <!-- Environments Panel -->
+      <div class="side-panel-content" id="environments-panel">
+        <div class="panel-header">
+          <h3>Environments</h3>
+          <button id="newEnvBtn" class="btn-icon" title="New Environment">+</button>
+        </div>
+        <select id="envSelector" class="env-selector"></select>
+        <div class="env-variables-header">
+          <span>Variable</span>
+          <span>Value</span>
+          <span></span>
+        </div>
+        <div id="envVariablesList" class="env-variables-list scrollable"></div>
+        <button id="addEnvVarBtn" class="btn-small full-width" style="margin-top:8px;">+ Add Variable</button>
+      </div>
+
+      <!-- History Panel -->
+      <div class="side-panel-content" id="history-panel">
+        <div class="panel-header">
+          <h3>History</h3>
+          <button id="clearHistoryBtn" class="btn-icon">Clear</button>
+        </div>
+        <div id="historyList" class="history-list scrollable"></div>
+      </div>
+
+      <div class="side-panel-grip"></div>
+    </aside>
+
+    <!-- ============ MAIN AREA ============ -->
+    <main class="main">
+
+      <!-- Request Tabs Bar -->
+      <div class="tabs-bar" id="tabsBar"></div>
+
+      <!-- Request Panel -->
+      <div class="request-panel" id="requestPanel">
+
+        <!-- Top bar: method + url + send -->
+        <div class="request-line">
+          <select id="methodSelect">
+            <option>GET</option>
+            <option>POST</option>
+            <option>PUT</option>
+            <option>PATCH</option>
+            <option>DELETE</option>
+            <option>QUERY</option>
+          </select>
+          <div class="url-wrapper">
+            <input id="urlInput" type="text" placeholder="{{BASE_URL}}/users" autocomplete="off" />
+            <div class="autocomplete-dropdown" id="autocompleteDropdown"></div>
+          </div>
+          <button id="sendBtn" class="btn-primary">Send</button>
+          <button id="saveBtn" class="btn-secondary">Save</button>
+        </div>
+
+        <!-- Config tabs -->
+        <div class="config-tabs tabs-row">
+          <button class="tab-btn active" data-tab="params">Params</button>
+          <button class="tab-btn" data-tab="headers">Headers</button>
+          <button class="tab-btn" data-tab="body">Body</button>
+          <button class="tab-btn" data-tab="auth">Authorization</button>
+          <button class="tab-btn" data-tab="settings">Settings</button>
+        </div>
+
+        <div class="tab-panels">
+          <!-- Params -->
+          <div class="tab-panel active" id="panel-params">
+            <table class="kv-table" id="paramsTable">
+              <thead><tr><th></th><th>Key</th><th>Value</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+            <button class="btn-small" id="addParamBtn">+ Add Param</button>
+          </div>
+
+          <!-- Headers -->
+          <div class="tab-panel" id="panel-headers">
+            <table class="kv-table" id="headersTable">
+              <thead><tr><th></th><th>Key</th><th>Value</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+            <button class="btn-small" id="addHeaderBtn">+ Add Header</button>
+          </div>
+
+          <!-- Body -->
+          <div class="tab-panel" id="panel-body">
+            <div class="body-mode-row">
+              <label><input type="radio" name="bodyMode" value="none" checked /> None</label>
+              <label><input type="radio" name="bodyMode" value="json" /> JSON</label>
+              <label><input type="radio" name="bodyMode" value="raw" /> Raw Text</label>
+              <label><input type="radio" name="bodyMode" value="form-data" /> Form Data</label>
+              <label><input type="radio" name="bodyMode" value="urlencoded" /> x-www-form-urlencoded</label>
+            </div>
+            <textarea id="bodyRawEditor" class="body-editor" placeholder='{ "name": "John" }' style="display:none;"></textarea>
+            <table class="kv-table" id="bodyFieldsTable" style="display:none;">
+              <thead><tr><th></th><th>Key</th><th>Value</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+            <button class="btn-small" id="addBodyFieldBtn" style="display:none;">+ Add Field</button>
+          </div>
+
+          <!-- Auth -->
+          <div class="tab-panel" id="panel-auth">
+            <select id="authType">
+              <option value="none">No Auth</option>
+              <option value="bearer">Bearer Token</option>
+              <option value="basic">Basic Auth</option>
+              <option value="apikey">API Key</option>
+            </select>
+            <div id="authFields"></div>
+          </div>
+
+          <!-- Settings -->
+          <div class="tab-panel" id="panel-settings">
+            <label class="setting-row">
+              <input type="checkbox" id="followRedirects" checked />
+              <span>Follow redirects</span>
+            </label>
+            <label class="setting-row">
+              <input type="checkbox" id="sendOnTabEnter" />
+              <span>Send request on Enter</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ RESIZABLE DIVIDER ============ -->
+      <div class="divider" id="divider"></div>
+
+      <!-- ============ RESPONSE PANEL ============ -->
+      <div class="response-panel" id="responsePanel">
+        <div class="response-header">
+          <span class="response-meta" id="responseMeta">Response will appear here after you hit Send.</span>
+        </div>
+        <div class="response-tabs tabs-row">
+          <button class="tab-btn active" data-tab="respBody">Body</button>
+          <button class="tab-btn" data-tab="respHeaders">Headers</button>
+          <button class="tab-btn" data-tab="respCookies">Cookies</button>
+        </div>
+        <div class="tab-panels response-tab-panels">
+          <div class="tab-panel active" id="panel-respBody">
+            <pre id="responseBody" class="response-body"></pre>
+          </div>
+          <div class="tab-panel" id="panel-respHeaders">
+            <pre id="responseHeaders" class="response-body"></pre>
+          </div>
+          <div class="tab-panel" id="panel-respCookies">
+            <pre id="responseCookies" class="response-body"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ ENVIRONMENT EDITOR (full tab, like Postman) ============ -->
+      <div class="env-editor-panel" id="envEditorPanel" style="display:none;">
+        <div class="env-editor-header">
+          <div class="env-editor-name-row">
+            <label>Name</label>
+            <input type="text" id="envEditorName" placeholder="Environment name" />
+          </div>
+          <div class="env-editor-actions">
+            <button id="envEditorSaveBtn" class="btn-primary">Save</button>
+          </div>
+        </div>
+        <table class="kv-table" id="envEditorTable">
+          <thead><tr><th>Key</th><th>Value</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <button class="btn-small" id="addEnvEditorVarBtn">+ Add Variable</button>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ============ SHARED MODAL (Save Request) ============ -->
+  <div id="modalOverlay" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <h3 id="modalTitle">Save Request</h3>
+      <div id="modalBody"></div>
+      <div class="modal-actions">
+        <button id="modalCancelBtn" class="btn-secondary">Cancel</button>
+        <button id="modalSaveBtn" class="btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/environments.js"></script>
+  <script src="js/collections.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/requestBuilder.js"></script>
+  <script src="js/responseViewer.js"></script>
+  <script src="js/sidePanelGrip.js"></script>
+  <script src="js/collectionSearch.js"></script>
+  <script src="js/dividerResizer.js"></script>
+  <script src="js/autoComplete.js"></script>
+  <script src="js/dragDrop.js"></script>
+  <script src="js/tabManager.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
