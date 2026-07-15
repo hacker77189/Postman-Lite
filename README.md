@@ -26,6 +26,9 @@ A lightweight browser-based API testing tool. Send HTTP requests, organize them 
 
 ```bash
 git clone https://github.com/hacker77189/Postman-Lite.git
+```
+
+```bash
 cd Postman-Lite
 npm install
 npm start
