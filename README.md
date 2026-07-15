@@ -8,7 +8,7 @@ A lightweight browser-based API testing tool. Send HTTP requests, organize them 
 - **HTTP methods** — GET, POST, PUT, PATCH, DELETE, QUERY.
 - **Request config** — Params, headers, body (JSON, raw, form-data, urlencoded).
 - **Authorization** — Bearer Token, Basic Auth, API Key.
-- **Collections** — Save, organize, search, rename, delete.
+- **Collections** — Save with custom name, organize, search, rename, delete.
 - **Environments** — Key-value variables with `{{VAR}}` substitution and autocomplete.
 - **Drag & drop** — Drag variables into any field.
 - **History** — Auto-saves every sent request.
@@ -16,6 +16,9 @@ A lightweight browser-based API testing tool. Send HTTP requests, organize them 
 - **SSRF protection** — Private IPs blocked server-side.
 - **Request timeout** — Configurable (default 30s).
 - **Response viewer** — Formatted JSON, headers, cookies, timing, size.
+- **JWT Inspector** — Auto-detects JWT responses and decodes header, payload, and signature inline.
+- **Security Header Audit** — Checks responses for 6 security headers (CSP, HSTS, X-Frame-Options, etc.) with pass/fail indicators.
+- **Schema Detector** — Extracts JSON structure with types from any JSON API response.
 - **Dark theme** — VS Code-inspired UI.
 - **Persistent storage** — Everything in localStorage.
 
@@ -65,6 +68,6 @@ postman-lite/
 2. Hit Send — the frontend resolves `{{VARS}}` and sends the request description to the backend proxy.
 3. The proxy validates the URL (SSRF check), sets a timeout, and calls the target API.
 4. Response is returned as JSON — status, headers, body, timing, size.
-5. View formatted JSON, headers, or cookies in the response panel.
+5. View formatted JSON, headers, cookies, security audit, or inferred schema in the response panel.
 
 All data persists in `localStorage` across refreshes.
