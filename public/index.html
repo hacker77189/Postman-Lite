@@ -174,16 +174,25 @@
           <button class="tab-btn active" data-tab="respBody">Body</button>
           <button class="tab-btn" data-tab="respHeaders">Headers</button>
           <button class="tab-btn" data-tab="respCookies">Cookies</button>
+          <button class="tab-btn" data-tab="respSecurity">Security</button>
+          <button class="tab-btn" data-tab="respSchema">Schema</button>
         </div>
         <div class="tab-panels response-tab-panels">
           <div class="tab-panel active" id="panel-respBody">
             <pre id="responseBody" class="response-body"></pre>
+            <div id="jwtInspector" class="jwt-inspector" style="display:none;"></div>
           </div>
           <div class="tab-panel" id="panel-respHeaders">
             <pre id="responseHeaders" class="response-body"></pre>
           </div>
           <div class="tab-panel" id="panel-respCookies">
             <pre id="responseCookies" class="response-body"></pre>
+          </div>
+          <div class="tab-panel" id="panel-respSecurity">
+            <pre id="responseSecurity" class="response-body"></pre>
+          </div>
+          <div class="tab-panel" id="panel-respSchema">
+            <pre id="responseSchema" class="response-body"></pre>
           </div>
         </div>
       </div>

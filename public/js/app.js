@@ -228,43 +228,56 @@ function bindSaveBtn() {
 // ---- Save request modal ----
 function openSaveModal() {
   const overlay = document.getElementById("modalOverlay");
-  const body = document.getElementById("modalBody");
   document.getElementById("modalTitle").textContent = "Save Request";
 
-  const cols = Storage.getCollections();
-  const NEW = "__new__";
-  body.innerHTML = `<label>Collection</label>
+  // Replace inner content to reset state.
+  document.getElementById("modalBody").innerHTML = `
+    <label>Collection</label>
     <select id="saveCollectionSelect" style="width:100%;padding:8px;margin:6px 0 12px;">
-      ${cols.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("")}
-      <option value="${NEW}">+ Create new collection...</option>
+      ${Storage.getCollections().map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("")}
+      <option value="__new__">+ Create new collection...</option>
     </select>
     <div id="saveNewCollectionRow" style="display:none;margin-bottom:12px;">
       <input type="text" id="saveNewCollectionInput" placeholder="New collection name" />
     </div>
     <label>Request Name</label>
-    <input type="text" id="saveRequestNameInput" placeholder="e.g. Login" value="New Request" style="width:100%;padding:8px;margin-top:6px;" />`;
+    <input type="text" id="saveRequestNameInput" placeholder="e.g. Login" value="Untitled" style="width:100%;padding:8px;margin-top:6px;" />`;
 
   const sel = document.getElementById("saveCollectionSelect");
   const newRow = document.getElementById("saveNewCollectionRow");
-  sel.addEventListener("change", () => { newRow.style.display = sel.value === NEW ? "block" : "none"; });
-  if (!cols.length) { sel.value = NEW; newRow.style.display = "block"; }
+  sel.addEventListener("change", () => { newRow.style.display = sel.value === "__new__" ? "block" : "none"; });
+  if (!Storage.getCollections().length) { sel.value = "__new__"; newRow.style.display = "block"; }
+
+  // Strip old listeners by replacing buttons with clones.
+  const oldSave = document.getElementById("modalSaveBtn");
+  const newSave = oldSave.cloneNode(true);
+  oldSave.replaceWith(newSave);
+
+  const oldCancel = document.getElementById("modalCancelBtn");
+  const newCancel = oldCancel.cloneNode(true);
+  oldCancel.replaceWith(newCancel);
 
   overlay.style.display = "flex";
 
-  document.getElementById("modalSaveBtn").addEventListener("click", () => {
-    const name = document.getElementById("saveRequestNameInput").value.trim() || "New Request";
+  newSave.addEventListener("click", () => {
+    const name = document.getElementById("saveRequestNameInput").value.trim() || "Untitled";
     let colId = sel.value;
-    if (colId === NEW) {
+    if (colId === "__new__") {
       const n = document.getElementById("saveNewCollectionInput").value.trim();
       if (!n) return;
       colId = Collections.create(n).id;
     }
-    Collections.addRequestToCollection(colId, name, RequestBuilder.getCurrentRequest());
+    const saved = Collections.addRequestToCollection(colId, name, RequestBuilder.getCurrentRequest());
     Collections.renderList();
+    if (saved) {
+      TabsManager.markAsSaved(colId, saved.id);
+      const tab = TabsManager.tabs.find(t => t.id === TabsManager.activeId);
+      if (tab) { tab.name = name; TabsManager.render(); }
+      TabsManager.updateSaveBtn();
+    }
     overlay.style.display = "none";
-  }, { once: true });
+  });
 
-  document.getElementById("modalCancelBtn").addEventListener("click", () => { overlay.style.display = "none"; }, { once: true });
+  newCancel.addEventListener("click", () => { overlay.style.display = "none"; });
 
-  overlay.addEventListener("click", e => { if (e.target === overlay) overlay.style.display = "none"; });
 }

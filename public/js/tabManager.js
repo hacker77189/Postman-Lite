@@ -17,6 +17,7 @@ const TabsManager = {
     this.activeId = id;
     showMainContent("request");
     this.render();
+    this.updateSaveBtn();
   },
 
   openNew() {
@@ -29,12 +30,21 @@ const TabsManager = {
     RequestBuilder.loadRequest(empty);
     this.render();
     this.scrollEnd();
+    this.updateSaveBtn();
   },
 
-  openTab(method, name, data, switchTo) {
+  openTab(method, name, data, switchTo, colId, reqId) {
+    if (colId && reqId) {
+      const existing = this.tabs.find(t => t.colId === colId && t.reqId === reqId);
+      if (existing) {
+        if (switchTo !== false) this.switch(existing.id);
+        return;
+      }
+    }
+
     this.saveCurrent();
     const id = generateId("tab");
-    this.tabs.push({ id, type: "request", method, name, request: JSON.parse(JSON.stringify(data)) });
+    this.tabs.push({ id, type: "request", method, name, request: JSON.parse(JSON.stringify(data)), colId, reqId });
     if (switchTo !== false) {
       this.activeId = id;
       showMainContent("request");
@@ -42,6 +52,7 @@ const TabsManager = {
     }
     this.render();
     this.scrollEnd();
+    if (switchTo !== false) this.updateSaveBtn();
   },
 
   openEnv(envId, envName) {
@@ -62,6 +73,11 @@ const TabsManager = {
     if (tab && tab.type === "request") tab.lastResponse = data;
   },
 
+  markAsSaved(colId, reqId) {
+    const tab = this.tabs.find(t => t.id === this.activeId);
+    if (tab && tab.type === "request") { tab.colId = colId; tab.reqId = reqId; }
+  },
+
   switch(id) {
     if (id === this.activeId) return;
     this.saveCurrent();
@@ -71,6 +87,7 @@ const TabsManager = {
     if (tab.type === "environment") { showMainContent("environment"); renderEnvEditor(tab.envId); }
     else { showMainContent("request"); RequestBuilder.loadRequest(tab.request); if (tab.lastResponse) ResponseViewer.render(tab.lastResponse); }
     this.render();
+    this.updateSaveBtn();
   },
 
   close(id) {
@@ -86,6 +103,18 @@ const TabsManager = {
     if (!this.activeId) return;
     const tab = this.tabs.find(t => t.id === this.activeId);
     if (tab?.type === "request") tab.request = RequestBuilder.getCurrentRequest();
+  },
+
+  updateSaveBtn() {
+    const tab = this.tabs.find(t => t.id === this.activeId);
+    const btn = document.getElementById("saveBtn");
+    if (tab?.colId && tab?.reqId) {
+      btn.textContent = "Saved ✓";
+      btn.disabled = true;
+    } else {
+      btn.textContent = "Save";
+      btn.disabled = false;
+    }
   },
 
   render() {

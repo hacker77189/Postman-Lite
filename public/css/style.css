@@ -1114,5 +1114,96 @@ button:active { opacity: 0.8; }
   box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.3);
 }
 
+/* ========== JWT INSPECTOR ========== */
+.jwt-inspector {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #1a1a1a;
+}
+
+.jwt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.jwt-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.jwt-toggle {
+  background: var(--hover);
+  color: var(--text-secondary);
+  border: none;
+  padding: 3px 10px;
+  font-size: 11px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.jwt-toggle:hover { background: #444; color: var(--text); }
+
+.jwt-content { padding: 10px 12px; }
+
+.jwt-section { margin-bottom: 10px; }
+
+.jwt-section:last-child { margin-bottom: 0; }
+
+.jwt-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 4px;
+}
+
+.jwt-pre {
+  background: #111;
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-family: "Consolas", "Cascadia Code", monospace;
+  font-size: 12px;
+  color: #d4d4d4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.jwt-sig {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+/* ========== SECURITY TAB ========== */
+#responseSecurity {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.sec-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sec-value {
+  color: #CE93D8;
+  font-family: "Consolas", monospace;
+  font-size: 11px;
+}
+
+/* ========== SCHEMA TAB ========== */
+#responseSchema {
+  font-size: 12px;
+}
+
 /* ========== UTILITY ========== */
 .hidden { display: none !important; }

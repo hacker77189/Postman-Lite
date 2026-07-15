@@ -8,9 +8,10 @@ const Environments = {
   },
 
   create(name) {
+    const all = Storage.getEnvironments();
     const env = { id: generateId("env"), name, variables: {} };
-    Storage.getEnvironments().push(env);
-    Storage.saveEnvironments(Storage.getEnvironments());
+    all.push(env);
+    Storage.saveEnvironments(all);
     return env;
   },
 
@@ -22,8 +23,9 @@ const Environments = {
   },
 
   updateVariables(envId, vars) {
-    const env = Storage.getEnvironments().find(e => e.id === envId);
-    if (env) { env.variables = vars; Storage.saveEnvironments(Storage.getEnvironments()); }
+    const all = Storage.getEnvironments();
+    const env = all.find(e => e.id === envId);
+    if (env) { env.variables = vars; Storage.saveEnvironments(all); }
   },
 
   renderSelector() {

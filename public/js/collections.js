@@ -4,38 +4,57 @@ const Collections = {
   expanded: {},
 
   create(name) {
+    const all = Storage.getCollections();
     const c = { id: generateId("col"), name, requests: [] };
-    Storage.getCollections().push(c);
-    Storage.saveCollections(Storage.getCollections());
+    all.push(c);
+    Storage.saveCollections(all);
     return c;
   },
 
   renameCollection(id, name) {
-    const c = Storage.getCollections().find(x => x.id === id);
-    if (c) { c.name = name; Storage.saveCollections(Storage.getCollections()); }
+    const all = Storage.getCollections();
+    const c = all.find(x => x.id === id);
+    if (c) { c.name = name; Storage.saveCollections(all); }
   },
 
   deleteCollection(id) {
     if (!confirm("Delete this collection and all its requests?")) return;
     Storage.saveCollections(Storage.getCollections().filter(c => c.id !== id));
+    TabsManager.tabs.forEach(t => {
+      if (t.colId === id) { t.colId = null; t.reqId = null; }
+    });
+    TabsManager.updateSaveBtn();
     this.renderList();
   },
 
   addRequestToCollection(colId, name, req) {
-    const c = Storage.getCollections().find(x => x.id === colId);
-    if (c) { c.requests.push({ id: generateId("req"), name, request: req }); Storage.saveCollections(Storage.getCollections()); }
+    const all = Storage.getCollections();
+    const c = all.find(x => x.id === colId);
+    if (c) {
+      const r = { id: generateId("req"), name, request: req };
+      c.requests.push(r);
+      Storage.saveCollections(all);
+      return r;
+    }
+    return null;
   },
 
   renameRequest(colId, reqId, name) {
-    const c = Storage.getCollections().find(x => x.id === colId);
+    const all = Storage.getCollections();
+    const c = all.find(x => x.id === colId);
     const r = c?.requests.find(x => x.id === reqId);
-    if (r) { r.name = name; Storage.saveCollections(Storage.getCollections()); }
+    if (r) { r.name = name; Storage.saveCollections(all); }
   },
 
   deleteRequest(colId, reqId) {
     if (!confirm("Delete this request?")) return;
-    const c = Storage.getCollections().find(x => x.id === colId);
-    if (c) { c.requests = c.requests.filter(r => r.id !== reqId); Storage.saveCollections(Storage.getCollections()); }
+    const all = Storage.getCollections();
+    const c = all.find(x => x.id === colId);
+    if (c) { c.requests = c.requests.filter(r => r.id !== reqId); Storage.saveCollections(all); }
+    TabsManager.tabs.forEach(t => {
+      if (t.colId === colId && t.reqId === reqId) { t.colId = null; t.reqId = null; }
+    });
+    TabsManager.updateSaveBtn();
     this.renderList();
   },
 
@@ -170,7 +189,7 @@ const Collections = {
 
           ri.addEventListener("click", e => {
             if (e.target.closest("button, input")) return;
-            TabsManager.openTab(sr.request.method || "GET", sr.name, sr.request);
+            TabsManager.openTab(sr.request.method || "GET", sr.name, sr.request, true, col.id, sr.id);
           });
           rw.appendChild(ri);
         });
@@ -199,8 +218,9 @@ function showNewRequestRow(wrapper, colId, filter) {
   const ok = () => {
     const name = inp.value.trim() || "New Request";
     const empty = { method: "GET", url: "", params: [], headers: [], bodyMode: "none", bodyRaw: "", bodyFields: [], auth: { type: "none" } };
-    Collections.addRequestToCollection(colId, name, empty);
-    TabsManager.openTab("GET", name, empty);
+    const saved = Collections.addRequestToCollection(colId, name, empty);
+    if (saved) TabsManager.openTab("GET", name, empty, true, colId, saved.id);
+    else TabsManager.openTab("GET", name, empty);
     row.style.display = "none";
     Collections.renderList(filter);
   };
