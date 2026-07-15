@@ -76,3 +76,15 @@ postman-lite/
 5. View formatted JSON, headers, cookies, security audit, or inferred schema in the response panel.
 
 All data persists in `localStorage` across refreshes.
+
+## Screenshots
+
+### Home
+
+![Home](assets/home.png)
+
+### Environment Variables
+
+![Environment Variables](assets/env.png)
+
+
