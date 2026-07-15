@@ -2,10 +2,10 @@
   "name": "postman-lite",
   "version": "1.0.0",
   "description": "Browser-based API testing tool (Postman Lite)",
-  "main": "server/index.js",
+  "main": "server/server.js",
   "scripts": {
-    "start": "node server/index.js",
-    "dev": "node --watch server/index.js"
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js"
   },
   "dependencies": {
     "express": "^4.19.2"

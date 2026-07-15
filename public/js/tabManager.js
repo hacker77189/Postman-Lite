@@ -1,186 +1,130 @@
-// public/js/tabManager.js
-//
-// Manages the request tab bar: opening, closing, switching between request
-// tabs and environment editor tabs. Each tab stores its own request state.
-//
+// Tab bar — each open request or env editor lives in its own tab.
+
 const TabsManager = {
-  tabs: [],
-  activeTabId: null,
+  tabs: [], activeId: null,
 
   init() {
-    this.openUntitledTab();
+    this.newUntitled();
     const bar = document.getElementById("tabsBar");
-    bar.addEventListener("wheel", (e) => {
-      if (bar.scrollWidth > bar.clientWidth) {
-        e.preventDefault();
-        bar.scrollLeft += e.deltaY;
-      }
+    bar.addEventListener("wheel", e => {
+      if (bar.scrollWidth > bar.clientWidth) { e.preventDefault(); bar.scrollLeft += e.deltaY; }
     }, { passive: false });
   },
 
-  openUntitledTab() {
+  newUntitled() {
     const id = generateId("tab");
-    const request = RequestBuilder.getCurrentRequest();
-    this.tabs.push({ id, type: "request", method: "GET", name: "Untitled", request });
-    this.activeTabId = id;
+    this.tabs.push({ id, type: "request", method: "GET", name: "Untitled", request: RequestBuilder.getCurrentRequest() });
+    this.activeId = id;
     showMainContent("request");
-    this.renderTabs();
+    this.render();
   },
 
-  openNewTab() {
-    this.saveCurrentState();
-    const emptyReq = { method: "GET", url: "", params: [], headers: [], bodyMode: "none", bodyRaw: "", bodyFields: [], auth: { type: "none" } };
+  openNew() {
+    this.saveCurrent();
+    const empty = { method: "GET", url: "", params: [], headers: [], bodyMode: "none", bodyRaw: "", bodyFields: [], auth: { type: "none" } };
     const id = generateId("tab");
-    this.tabs.push({ id, type: "request", method: "GET", name: "Untitled", request: emptyReq });
-    this.activeTabId = id;
+    this.tabs.push({ id, type: "request", method: "GET", name: "Untitled", request: empty });
+    this.activeId = id;
     showMainContent("request");
-    RequestBuilder.loadRequest(emptyReq);
-    this.renderTabs();
-    this.scrollToEnd();
+    RequestBuilder.loadRequest(empty);
+    this.render();
+    this.scrollEnd();
   },
 
-  openTab(method, name, requestData, switchTo) {
-    this.saveCurrentState();
+  openTab(method, name, data, switchTo) {
+    this.saveCurrent();
     const id = generateId("tab");
-    this.tabs.push({ id, type: "request", method, name, request: JSON.parse(JSON.stringify(requestData)) });
+    this.tabs.push({ id, type: "request", method, name, request: JSON.parse(JSON.stringify(data)) });
     if (switchTo !== false) {
-      this.activeTabId = id;
+      this.activeId = id;
       showMainContent("request");
-      RequestBuilder.loadRequest(requestData);
+      RequestBuilder.loadRequest(data);
     }
-    this.renderTabs();
-    this.scrollToEnd();
+    this.render();
+    this.scrollEnd();
   },
 
-  openEnvTab(envId, envName) {
-    this.saveCurrentState();
-    const existing = this.tabs.find((t) => t.type === "environment" && t.envId === envId);
-    if (existing) {
-      this.switchTab(existing.id);
-      return;
-    }
+  openEnv(envId, envName) {
+    this.saveCurrent();
+    const exist = this.tabs.find(t => t.type === "environment" && t.envId === envId);
+    if (exist) { this.switch(exist.id); return; }
     const id = generateId("tab");
     this.tabs.push({ id, type: "environment", envId, method: "", name: `Env: ${envName}` });
-    this.activeTabId = id;
+    this.activeId = id;
     showMainContent("environment");
     renderEnvEditor(envId);
-    this.renderTabs();
-    this.scrollToEnd();
+    this.render();
+    this.scrollEnd();
   },
 
-  switchTab(id) {
-    if (id === this.activeTabId) return;
-    this.saveCurrentState();
-    this.activeTabId = id;
-    const tab = this.tabs.find((t) => t.id === id);
-    if (tab) {
-      if (tab.type === "environment") {
-        showMainContent("environment");
-        renderEnvEditor(tab.envId);
-      } else {
-        showMainContent("request");
-        RequestBuilder.loadRequest(tab.request);
-      }
-    }
-    this.renderTabs();
+  saveResponse(data) {
+    const tab = this.tabs.find(t => t.id === this.activeId);
+    if (tab && tab.type === "request") tab.lastResponse = data;
   },
 
-  closeTab(id) {
+  switch(id) {
+    if (id === this.activeId) return;
+    this.saveCurrent();
+    this.activeId = id;
+    const tab = this.tabs.find(t => t.id === id);
+    if (!tab) { this.render(); return; }
+    if (tab.type === "environment") { showMainContent("environment"); renderEnvEditor(tab.envId); }
+    else { showMainContent("request"); RequestBuilder.loadRequest(tab.request); if (tab.lastResponse) ResponseViewer.render(tab.lastResponse); }
+    this.render();
+  },
+
+  close(id) {
     if (this.tabs.length <= 1) return;
-    const idx = this.tabs.findIndex((t) => t.id === id);
-    if (idx === -1) return;
-    const closedTab = this.tabs[idx];
+    const idx = this.tabs.findIndex(t => t.id === id);
+    if (idx < 0) return;
     this.tabs.splice(idx, 1);
-    if (this.activeTabId === id) {
-      const newIdx = Math.min(idx, this.tabs.length - 1);
-      this.switchTab(this.tabs[newIdx].id);
-    }
-    this.renderTabs();
+    if (this.activeId === id) this.switch(this.tabs[Math.min(idx, this.tabs.length - 1)].id);
+    this.render();
   },
 
-  saveCurrentState() {
-    if (!this.activeTabId) return;
-    const tab = this.tabs.find((t) => t.id === this.activeTabId);
-    if (!tab) return;
-    if (tab.type === "request") {
-      tab.request = RequestBuilder.getCurrentRequest();
-    }
+  saveCurrent() {
+    if (!this.activeId) return;
+    const tab = this.tabs.find(t => t.id === this.activeId);
+    if (tab?.type === "request") tab.request = RequestBuilder.getCurrentRequest();
   },
 
-  renderTabs() {
+  render() {
     const bar = document.getElementById("tabsBar");
     bar.innerHTML = "";
-    if (!this.tabs.length) {
-      bar.innerHTML = '<div style="padding:0 12px;font-size:12px;color:var(--text-secondary);line-height:36px;">No open tabs</div>';
-      return;
-    }
-    this.tabs.forEach((tab) => {
+    if (!this.tabs.length) { bar.innerHTML = '<div style="padding:0 12px;font-size:12px;color:var(--text-secondary);line-height:36px;">No open tabs</div>'; return; }
+
+    this.tabs.forEach(tab => {
       const el = document.createElement("div");
-      el.className = `request-tab${tab.id === this.activeTabId ? " active" : ""}`;
+      el.className = `request-tab${tab.id === this.activeId ? " active" : ""}`;
       el.dataset.tabId = tab.id;
+      const dot = tab.type === "environment" ? "var(--accent)" : getMethodColor(tab.method);
+      el.innerHTML = `<span class="tab-method-dot" style="background:${dot}"></span><span class="tab-name">${escapeHtml(tab.name)}</span><button class="tab-close" data-tab-id="${tab.id}">&times;</button>`;
 
-      if (tab.type === "environment") {
-        el.innerHTML = `
-          <span class="tab-method-dot" style="background:var(--accent)"></span>
-          <span class="tab-name">${escapeHtml(tab.name)}</span>
-          <button class="tab-close" data-tab-id="${tab.id}">&times;</button>
-        `;
-      } else {
-        el.innerHTML = `
-          <span class="tab-method-dot" style="background:${getMethodColor(tab.method)}"></span>
-          <span class="tab-name">${escapeHtml(tab.name)}</span>
-          <button class="tab-close" data-tab-id="${tab.id}">&times;</button>
-        `;
-      }
-
-      const nameSpan = el.querySelector(".tab-name");
-      nameSpan.addEventListener("dblclick", (e) => {
+      el.querySelector(".tab-name").addEventListener("dblclick", e => {
         e.stopPropagation();
-        const input = document.createElement("input");
-        input.className = "tab-name-input";
-        input.value = tab.name;
-        input.style.width = Math.max(60, tab.name.length * 9) + "px";
-        nameSpan.replaceWith(input);
-        input.focus();
-        input.select();
-        const finish = () => {
-          const val = input.value.trim();
-          if (val && val !== tab.name) {
-            tab.name = val;
-          }
-          this.renderTabs();
-        };
-        input.addEventListener("blur", finish);
-        input.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") { e.preventDefault(); input.blur(); }
-          if (e.key === "Escape") { input.value = tab.name; input.blur(); }
+        const inp = document.createElement("input");
+        inp.className = "tab-name-input";
+        inp.value = tab.name;
+        inp.style.width = Math.max(60, tab.name.length * 9) + "px";
+        e.target.replaceWith(inp); inp.focus(); inp.select();
+        const done = () => { const v = inp.value.trim(); if (v && v !== tab.name) tab.name = v; this.render(); };
+        inp.addEventListener("blur", done);
+        inp.addEventListener("keydown", e => {
+          if (e.key === "Enter") { e.preventDefault(); inp.blur(); }
+          if (e.key === "Escape") { inp.value = tab.name; inp.blur(); }
         });
       });
 
-      el.addEventListener("click", (e) => {
-        if (e.target.closest(".tab-close")) return;
-        if (e.target.closest("input")) return;
-        this.switchTab(tab.id);
-      });
-      el.querySelector(".tab-close").addEventListener("click", (e) => {
-        e.stopPropagation();
-        this.closeTab(tab.id);
-      });
+      el.addEventListener("click", e => { if (!e.target.closest(".tab-close, input")) this.switch(tab.id); });
+      el.querySelector(".tab-close").addEventListener("click", e => { e.stopPropagation(); this.close(tab.id); });
       bar.appendChild(el);
     });
 
-    const addBtn = document.createElement("button");
-    addBtn.className = "tab-add-btn";
-    addBtn.textContent = "+";
-    addBtn.title = "New tab";
-    addBtn.addEventListener("click", () => this.openNewTab());
-    bar.appendChild(addBtn);
+    const add = document.createElement("button");
+    add.className = "tab-add-btn"; add.textContent = "+"; add.title = "New tab";
+    add.addEventListener("click", () => this.openNew());
+    bar.appendChild(add);
   },
 
-  scrollToEnd() {
-    setTimeout(() => {
-      const bar = document.getElementById("tabsBar");
-      bar.scrollLeft = bar.scrollWidth;
-    }, 10);
-  },
+  scrollEnd() { setTimeout(() => { document.getElementById("tabsBar").scrollLeft = 1e9; }, 10); },
 };

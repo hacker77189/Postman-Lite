@@ -780,6 +780,23 @@ button:active { opacity: 0.8; }
 
 .kv-table input[type="text"]:focus { border-color: var(--accent); }
 
+#authFields input[type="text"],
+#authFields input[type="password"],
+#authFields select {
+  width: 100%;
+  padding: 8px;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+#authFields input:focus,
+#authFields select:focus { border-color: var(--accent); }
+
 .kv-table input[type="checkbox"] {
   accent-color: var(--accent);
   cursor: pointer;

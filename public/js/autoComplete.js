@@ -1,158 +1,106 @@
-// public/js/autoComplete.js
-//
-// Provides {{VAR}} autocomplete for any text input or textarea. When the
-// user types '{{', a dropdown appears showing matching environment variables.
-//
+// {{VAR}} autocomplete — shows matching env vars as you type "{{".
+
 const AutoComplete = {
-  dropdown: null,
-  activeInput: null,
-  startPos: null,
-  selectedIdx: -1,
-  items: [],
+  dd: null, activeInput: null, startPos: null, sel: -1, items: [],
 
   init() {
-    this.dropdown = document.getElementById("autocompleteDropdown");
+    this.dd = document.getElementById("autocompleteDropdown");
 
-    const urlInput = document.getElementById("urlInput");
-    urlInput.addEventListener("input", () => this.handleInput(urlInput));
-    urlInput.addEventListener("keydown", (e) => this.handleKeydown(e, urlInput));
-    urlInput.addEventListener("blur", () => setTimeout(() => this.hide(), 150));
-    urlInput.addEventListener("click", () => this.handleInput(urlInput));
+    const url = document.getElementById("urlInput");
+    url.addEventListener("input", () => this.handle(url));
+    url.addEventListener("keydown", e => this.kd(e, url));
+    url.addEventListener("blur", () => setTimeout(() => this.hide(), 150));
+    url.addEventListener("click", () => this.handle(url));
 
-    document.addEventListener("input", (e) => {
-      const target = e.target;
-      if (target.matches(".kv-table input[type='text']") || target.matches(".body-editor") || target.matches("#authFields input, #authFields textarea")) {
-        this.handleInput(target);
-      }
+    // Delegate for table inputs, body editor, auth fields.
+    document.addEventListener("input", e => {
+      const t = e.target;
+      if (t.matches(".kv-table input[type='text'], .body-editor, #authFields input, #authFields textarea")) this.handle(t);
     }, true);
 
-    document.addEventListener("keydown", (e) => {
-      const target = e.target;
-      if (target.matches(".kv-table input[type='text']") || target.matches(".body-editor") || target.matches("#authFields input, #authFields textarea")) {
-        this.handleKeydown(e, target);
-      }
+    document.addEventListener("keydown", e => {
+      const t = e.target;
+      if (t.matches(".kv-table input[type='text'], .body-editor, #authFields input, #authFields textarea")) this.kd(e, t);
     }, true);
 
-    document.addEventListener("blur", (e) => {
+    document.addEventListener("blur", e => {
       if (e.target.matches(".kv-table input[type='text'], .body-editor, #authFields input, #authFields textarea")) {
         setTimeout(() => this.hide(), 150);
       }
     }, true);
   },
 
-  handleInput(input) {
+  handle(input) {
     const val = input.value;
-    const selStart = input.selectionStart;
-    const textBefore = val.substring(0, selStart);
+    const before = val.substring(0, input.selectionStart);
+    const open = before.lastIndexOf("{{");
+    if (open === -1 || before.lastIndexOf("}}") > open) { this.hide(); return; }
 
-    const lastOpen = textBefore.lastIndexOf("{{");
-    if (lastOpen === -1 || textBefore.lastIndexOf("}}") > lastOpen) {
-      this.hide();
-      return;
-    }
-
-    const partial = textBefore.substring(lastOpen + 2);
-
-    const env = this.getActiveVars();
-    const matches = Object.keys(env)
-      .filter((k) => k.toLowerCase().startsWith(partial.toLowerCase()))
-      .sort();
-
+    const partial = before.substring(open + 2);
+    const vars = this.getVars();
+    const matches = Object.keys(vars).filter(k => k.toLowerCase().startsWith(partial.toLowerCase())).sort();
     if (!matches.length) { this.hide(); return; }
 
-    this.activeInput = input;
-    this.startPos = lastOpen;
-    this.items = matches;
-    this.selectedIdx = -1;
-    this.renderDropdown(matches, env, partial);
-    this.positionDropdown(input);
+    this.activeInput = input; this.startPos = open; this.items = matches; this.sel = -1;
+    this.render(matches, vars);
+    this.position(input);
   },
 
-  getActiveVars() {
+  getVars() {
     const id = Storage.getActiveEnvId();
     if (!id) return {};
-    const envs = Storage.getEnvironments();
-    const env = envs.find((e) => e.id === id);
-    return env ? env.variables : {};
+    const e = Storage.getEnvironments().find(x => x.id === id);
+    return e ? e.variables : {};
   },
 
-  renderDropdown(matches, env, partial) {
-    const dd = this.dropdown;
-    dd.innerHTML = "";
-    matches.forEach((key, i) => {
+  render(matches, vars) {
+    this.dd.innerHTML = "";
+    matches.forEach((k, i) => {
       const item = document.createElement("div");
-      item.className = `autocomplete-item${i === this.selectedIdx ? " selected" : ""}`;
-      const value = env[key] || "";
-      item.innerHTML = `<span class="ac-key">${escapeHtml(key)}</span><span class="ac-value">${escapeHtml(value)}</span>`;
-      item.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        this.insert(key);
-      });
+      item.className = `autocomplete-item${i === this.sel ? " selected" : ""}`;
+      item.innerHTML = `<span class="ac-key">${escapeHtml(k)}</span><span class="ac-value">${escapeHtml(vars[k] || "")}</span>`;
+      item.addEventListener("mousedown", e => { e.preventDefault(); this.insert(k); });
       item.addEventListener("mouseenter", () => {
-        this.selectedIdx = i;
-        dd.querySelectorAll(".autocomplete-item").forEach((el, j) => el.classList.toggle("selected", j === i));
+        this.sel = i;
+        this.dd.querySelectorAll(".autocomplete-item").forEach((el, j) => el.classList.toggle("selected", j === i));
       });
-      dd.appendChild(item);
+      this.dd.appendChild(item);
     });
-    dd.classList.add("visible");
+    this.dd.classList.add("visible");
   },
 
-  positionDropdown(input) {
-    const dd = this.dropdown;
-    dd.style.position = "fixed";
-    const rect = input.getBoundingClientRect();
-    dd.style.left = rect.left + "px";
-    dd.style.top = (rect.bottom + 2) + "px";
-    dd.style.width = Math.min(rect.width, 320) + "px";
+  position(input) {
+    const r = input.getBoundingClientRect();
+    this.dd.style.cssText = `position:fixed;left:${r.left}px;top:${r.bottom + 2}px;width:${Math.min(r.width, 320)}px;`;
   },
 
   hide() {
-    this.dropdown.classList.remove("visible");
-    this.activeInput = null;
-    this.startPos = null;
-    this.selectedIdx = -1;
+    this.dd.classList.remove("visible");
+    this.activeInput = null; this.startPos = null; this.sel = -1;
   },
 
-  handleKeydown(e, input) {
-    if (!this.dropdown.classList.contains("visible")) return;
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      this.selectedIdx = Math.min(this.selectedIdx + 1, this.items.length - 1);
-      this.highlightSelected();
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      this.selectedIdx = Math.max(this.selectedIdx - 1, 0);
-      this.highlightSelected();
-    } else if (e.key === "Enter" || e.key === "Tab") {
-      if (this.selectedIdx >= 0 && this.selectedIdx < this.items.length) {
-        e.preventDefault();
-        this.insert(this.items[this.selectedIdx]);
-      }
-    } else if (e.key === "Escape") {
-      this.hide();
-    }
+  kd(e, input) {
+    if (!this.dd.classList.contains("visible")) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); this.sel = Math.min(this.sel + 1, this.items.length - 1); this.hl(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); this.sel = Math.max(this.sel - 1, 0); this.hl(); }
+    else if ((e.key === "Enter" || e.key === "Tab") && this.sel >= 0) { e.preventDefault(); this.insert(this.items[this.sel]); }
+    else if (e.key === "Escape") this.hide();
   },
 
-  highlightSelected() {
-    const items = this.dropdown.querySelectorAll(".autocomplete-item");
-    items.forEach((el, i) => el.classList.toggle("selected", i === this.selectedIdx));
-    if (this.selectedIdx >= 0 && items[this.selectedIdx]) {
-      items[this.selectedIdx].scrollIntoView({ block: "nearest" });
-    }
+  hl() {
+    this.dd.querySelectorAll(".autocomplete-item").forEach((el, i) => el.classList.toggle("selected", i === this.sel));
+    if (this.sel >= 0) this.dd.querySelectorAll(".autocomplete-item")[this.sel]?.scrollIntoView({ block: "nearest" });
   },
 
   insert(key) {
-    const input = this.activeInput;
-    if (!input || this.startPos === null) { this.hide(); return; }
-    const val = input.value;
-    const selStart = input.selectionStart;
-    const insertion = `{{${key}}}`;
-    input.value = val.substring(0, this.startPos) + insertion + val.substring(selStart);
-    const newPos = this.startPos + insertion.length;
-    input.selectionStart = input.selectionEnd = newPos;
+    const inp = this.activeInput;
+    if (!inp || this.startPos === null) { this.hide(); return; }
+    const ins = `{{${key}}}`;
+    inp.value = inp.value.substring(0, this.startPos) + ins + inp.value.substring(inp.selectionStart);
+    const pos = this.startPos + ins.length;
+    inp.selectionStart = inp.selectionEnd = pos;
     this.hide();
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.focus();
+    inp.dispatchEvent(new Event("input", { bubbles: true }));
+    inp.focus();
   },
 };

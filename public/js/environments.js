@@ -1,67 +1,94 @@
-// public/js/environments.js
-//
-// Handles: environment CRUD, the dropdown selector, and the {{VAR}}
-// substitution pass that runs on the request right before sending.
+// Environment CRUD, variable {{VAR}} resolution, and drag-to-insert.
 
 const Environments = {
-  // Returns the currently active environment's variables as a flat object,
-  // e.g. { BASE_URL: "http://localhost:5000", TOKEN: "xxx" }.
-  // Returns {} if no environment is active.
   getActiveVariables() {
-    const activeId = Storage.getActiveEnvId();
-    const environments = Storage.getEnvironments();
-    const active = environments.find((e) => e.id === activeId);
-    return active ? active.variables : {};
+    const id = Storage.getActiveEnvId();
+    const env = Storage.getEnvironments().find(e => e.id === id);
+    return env ? env.variables : {};
   },
 
   create(name) {
-    const environments = Storage.getEnvironments();
-    const newEnv = { id: generateId("env"), name, variables: {} };
-    environments.push(newEnv);
-    Storage.saveEnvironments(environments);
-    return newEnv;
+    const env = { id: generateId("env"), name, variables: {} };
+    Storage.getEnvironments().push(env);
+    Storage.saveEnvironments(Storage.getEnvironments());
+    return env;
   },
 
   deleteEnv(id) {
     if (!confirm("Delete this environment?")) return;
-    const environments = Storage.getEnvironments();
-    Storage.saveEnvironments(environments.filter((e) => e.id !== id));
+    const list = Storage.getEnvironments().filter(e => e.id !== id);
+    Storage.saveEnvironments(list);
     if (Storage.getActiveEnvId() === id) Storage.setActiveEnvId("");
   },
 
-  updateVariables(envId, variables) {
-    const environments = Storage.getEnvironments();
-    const env = environments.find((e) => e.id === envId);
-    if (env) {
-      env.variables = variables;
-      Storage.saveEnvironments(environments);
-    }
+  updateVariables(envId, vars) {
+    const env = Storage.getEnvironments().find(e => e.id === envId);
+    if (env) { env.variables = vars; Storage.saveEnvironments(Storage.getEnvironments()); }
   },
 
-  // Renders <option> elements into the sidebar <select>.
   renderSelector() {
-    const select = document.getElementById("envSelector");
-    const environments = Storage.getEnvironments();
-    const activeId = Storage.getActiveEnvId();
-
-    select.innerHTML = '<option value="">No Environment</option>';
-    environments.forEach((env) => {
+    const sel = document.getElementById("envSelector");
+    const envs = Storage.getEnvironments();
+    const active = Storage.getActiveEnvId();
+    sel.innerHTML = '<option value="">No Environment</option>';
+    envs.forEach(e => {
       const opt = document.createElement("option");
-      opt.value = env.id;
-      opt.textContent = env.name;
-      if (env.id === activeId) opt.selected = true;
-      select.appendChild(opt);
+      opt.value = e.id; opt.textContent = e.name;
+      if (e.id === active) opt.selected = true;
+      sel.appendChild(opt);
     });
   },
 
-  // The core substitution function: replaces every {{KEY}} occurrence in a
-  // string with the matching variable's value. If a key isn't found, the
-  // placeholder is left untouched (visible feedback that a variable is missing,
-  // rather than silently producing "undefined" in the URL).
-  resolve(str, variables) {
+  resolve(str, vars) {
     if (typeof str !== "string") return str;
-    return str.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-      return Object.prototype.hasOwnProperty.call(variables, key) ? variables[key] : match;
+    return str.replace(/\{\{([a-zA-Z_][a-zA-Z0-9_.-]*)\}\}/g, (m, k) =>
+      Object.prototype.hasOwnProperty.call(vars, k) ? vars[k] : m
+    );
+  },
+};
+
+// Drag-drop: drag variable keys from the sidebar into URL/header/body/auth fields.
+
+const DragDrop = {
+  init() {
+    const url = document.getElementById("urlInput");
+    const body = document.getElementById("bodyRawEditor");
+    [url, body].forEach(el => {
+      if (!el) return;
+      el.addEventListener("dragover", e => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; el.closest(".url-wrapper")?.classList.add("drag-over"); });
+      el.addEventListener("dragleave", () => el.closest(".url-wrapper")?.classList.remove("drag-over"));
+      el.addEventListener("drop", e => { e.preventDefault(); el.closest(".url-wrapper")?.classList.remove("drag-over"); this.insertAt(el, e.dataTransfer.getData("text/plain")); });
     });
+
+    // Delegate for table inputs and auth fields.
+    document.addEventListener("dragover", e => {
+      const t = e.target;
+      if (t.matches(".kv-table input[type='text'], #authFields input, #authFields textarea")) {
+        e.preventDefault(); e.dataTransfer.dropEffect = "copy"; t.classList.add("drag-over-input");
+      }
+    }, true);
+    document.addEventListener("dragleave", e => {
+      const t = e.target;
+      if (t.matches(".kv-table input[type='text'], #authFields input, #authFields textarea")) {
+        t.classList.remove("drag-over-input");
+      }
+    }, true);
+    document.addEventListener("drop", e => {
+      const t = e.target;
+      if (t.matches(".kv-table input[type='text'], #authFields input, #authFields textarea")) {
+        e.preventDefault(); t.classList.remove("drag-over-input");
+        this.insertAt(t, e.dataTransfer.getData("text/plain"));
+      }
+    }, true);
+  },
+
+  insertAt(input, text) {
+    if (!text) return;
+    const s = input.selectionStart, e = input.selectionEnd;
+    input.value = input.value.substring(0, s) + text + input.value.substring(e);
+    const p = s + text.length;
+    input.selectionStart = input.selectionEnd = p;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus();
   },
 };

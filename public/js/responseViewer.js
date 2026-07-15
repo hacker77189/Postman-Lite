@@ -1,76 +1,43 @@
-// public/js/responseViewer.js
-//
-// Takes whatever our /api/proxy endpoint returned and renders it: status
-// line with color coding, formatted JSON body (or raw text if not JSON),
-// response headers, timing, and size.
+// Renders whatever came back from the proxy — body, headers, timing.
 
 const ResponseViewer = {
   showLoading() {
     document.getElementById("responseMeta").textContent = "Sending request...";
-    document.getElementById("responseBody").textContent = "";
-    document.getElementById("responseHeaders").textContent = "";
-    document.getElementById("responseCookies").textContent = "";
+    ["responseBody", "responseHeaders", "responseCookies"].forEach(id => document.getElementById(id).textContent = "");
   },
 
   render(data) {
-    const metaEl = document.getElementById("responseMeta");
-    const bodyEl = document.getElementById("responseBody");
-    const headersEl = document.getElementById("responseHeaders");
-    const cookiesEl = document.getElementById("responseCookies");
+    if (data.error) { this.renderError(data.error); return; }
 
-    if (data.error) {
-      this.renderError(data.error);
-      return;
-    }
+    const ok = data.status >= 200 && data.status < 400;
+    document.getElementById("responseMeta").innerHTML =
+      `<span class="${ok ? "status-ok" : "status-err"}">${data.status} ${data.statusText}</span> &middot; ${data.timeMs} ms &middot; ${this.fmtSize(data.sizeBytes)}`;
 
-    const statusClass = data.status >= 200 && data.status < 400 ? "status-ok" : "status-err";
-    metaEl.innerHTML = `
-      <span class="${statusClass}">${data.status} ${data.statusText}</span>
-      &nbsp;&middot;&nbsp; ${data.timeMs} ms
-      &nbsp;&middot;&nbsp; ${this.formatSize(data.sizeBytes)}
-    `;
-
-    bodyEl.textContent = this.formatBody(data.body);
-    headersEl.textContent = Object.entries(data.headers)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join("\n");
-    cookiesEl.textContent = this.formatCookies(data.headers);
+    document.getElementById("responseBody").textContent = this.fmtBody(data.body);
+    document.getElementById("responseHeaders").textContent =
+      Object.entries(data.headers).map(([k, v]) => `${k}: ${v}`).join("\n");
+    document.getElementById("responseCookies").textContent = this.fmtCookies(data.headers);
   },
 
-  renderError(message) {
+  renderError(msg) {
     document.getElementById("responseMeta").innerHTML = `<span class="status-err">Request failed</span>`;
-    document.getElementById("responseBody").textContent = message;
-    document.getElementById("responseHeaders").textContent = "";
-    document.getElementById("responseCookies").textContent = "";
+    document.getElementById("responseBody").textContent = msg;
+    ["responseHeaders", "responseCookies"].forEach(id => document.getElementById(id).textContent = "");
   },
 
-  // Tries to pretty-print JSON; falls back to showing raw text if the
-  // response body isn't valid JSON (e.g. HTML error pages, plain text).
-  formatBody(text) {
-    try {
-      const parsed = JSON.parse(text);
-      return JSON.stringify(parsed, null, 2);
-    } catch {
-      return text;
-    }
+  fmtBody(text) {
+    try { return JSON.stringify(JSON.parse(text), null, 2); } catch { return text; }
   },
 
-  formatSize(bytes) {
-    if (bytes < 1024) return `${bytes} B`;
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  },
+  fmtSize(b) { return b < 1024 ? `${b} B` : `${(b / 1024).toFixed(1)} KB`; },
 
-  formatCookies(headers) {
-    const raw = headers["set-cookie"];
+  fmtCookies(hdrs) {
+    const raw = hdrs["set-cookie"];
     if (!raw) return "No cookies in response.";
-    const cookies = Array.isArray(raw) ? raw : [raw];
-    return cookies
-      .map((c) => {
-        const parts = c.split(";").map((p) => p.trim());
-        const nvp = parts[0];
-        const attrs = parts.slice(1).join("\n  ") || "(no attributes)";
-        return `${nvp}\n  ${attrs}`;
-      })
-      .join("\n\n");
+    const list = Array.isArray(raw) ? raw : [raw];
+    return list.map(c => {
+      const parts = c.split(";").map(p => p.trim());
+      return `${parts[0]}\n  ${parts.slice(1).join("\n  ") || "(no attributes)"}`;
+    }).join("\n\n");
   },
 };

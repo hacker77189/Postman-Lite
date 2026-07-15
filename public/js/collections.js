@@ -1,283 +1,214 @@
-// public/js/collections.js
-//
-// Manages saved request collections: create, rename, delete collections and
-// the requests within them. Renders the collapsible tree in the sidebar.
-//
+// Collection tree with inline create, rename, delete, and real-time search.
+
 const Collections = {
-  expandedState: {},
+  expanded: {},
 
   create(name) {
-    const collections = Storage.getCollections();
-    const newCollection = { id: generateId("col"), name, requests: [] };
-    collections.push(newCollection);
-    Storage.saveCollections(collections);
-    return newCollection;
+    const c = { id: generateId("col"), name, requests: [] };
+    Storage.getCollections().push(c);
+    Storage.saveCollections(Storage.getCollections());
+    return c;
   },
 
-  renameCollection(id, newName) {
-    const collections = Storage.getCollections();
-    const col = collections.find((c) => c.id === id);
-    if (col) { col.name = newName; Storage.saveCollections(collections); }
+  renameCollection(id, name) {
+    const c = Storage.getCollections().find(x => x.id === id);
+    if (c) { c.name = name; Storage.saveCollections(Storage.getCollections()); }
   },
 
   deleteCollection(id) {
     if (!confirm("Delete this collection and all its requests?")) return;
-    const collections = Storage.getCollections();
-    Storage.saveCollections(collections.filter((c) => c.id !== id));
+    Storage.saveCollections(Storage.getCollections().filter(c => c.id !== id));
     this.renderList();
   },
 
-  addRequestToCollection(collectionId, name, requestData) {
-    const collections = Storage.getCollections();
-    const collection = collections.find((c) => c.id === collectionId);
-    if (!collection) return;
-    collection.requests.push({ id: generateId("req"), name, request: requestData });
-    Storage.saveCollections(collections);
+  addRequestToCollection(colId, name, req) {
+    const c = Storage.getCollections().find(x => x.id === colId);
+    if (c) { c.requests.push({ id: generateId("req"), name, request: req }); Storage.saveCollections(Storage.getCollections()); }
   },
 
-  renameRequest(collectionId, requestId, newName) {
-    const collections = Storage.getCollections();
-    const col = collections.find((c) => c.id === collectionId);
-    if (!col) return;
-    const req = col.requests.find((r) => r.id === requestId);
-    if (req) { req.name = newName; Storage.saveCollections(collections); }
+  renameRequest(colId, reqId, name) {
+    const c = Storage.getCollections().find(x => x.id === colId);
+    const r = c?.requests.find(x => x.id === reqId);
+    if (r) { r.name = name; Storage.saveCollections(Storage.getCollections()); }
   },
 
-  deleteRequest(collectionId, requestId) {
+  deleteRequest(colId, reqId) {
     if (!confirm("Delete this request?")) return;
-    const collections = Storage.getCollections();
-    const col = collections.find((c) => c.id === collectionId);
-    if (!col) return;
-    col.requests = col.requests.filter((r) => r.id !== requestId);
-    Storage.saveCollections(collections);
+    const c = Storage.getCollections().find(x => x.id === colId);
+    if (c) { c.requests = c.requests.filter(r => r.id !== reqId); Storage.saveCollections(Storage.getCollections()); }
     this.renderList();
   },
 
-  findRequest(collectionId, requestId) {
-    const collections = Storage.getCollections();
-    const collection = collections.find((c) => c.id === collectionId);
-    if (!collection) return null;
-    return collection.requests.find((r) => r.id === requestId) || null;
+  findRequest(colId, reqId) {
+    return Storage.getCollections().find(c => c.id === colId)?.requests.find(r => r.id === reqId) || null;
   },
 
   renderList(searchFilter) {
-    const container = document.getElementById("collectionsList");
-    const collections = Storage.getCollections();
+    const el = document.getElementById("collectionsList");
+    const cols = Storage.getCollections();
     const self = this;
-    container.innerHTML = "";
+    el.innerHTML = "";
 
-    if (!collections.length) {
-      container.innerHTML = '<div class="history-empty">No collections yet.</div>';
+    if (!cols.length) {
+      el.innerHTML = '<div class="history-empty">No collections yet.</div>';
       return;
     }
 
-    collections.forEach((collection) => {
-      if (!(collection.id in this.expandedState)) {
-        this.expandedState[collection.id] = true;
-      }
-      const isExpanded = this.expandedState[collection.id];
+    cols.forEach(col => {
+      if (!(col.id in self.expanded)) self.expanded[col.id] = true;
+      const open = self.expanded[col.id];
 
-      const filteredRequests = searchFilter
-        ? collection.requests.filter(
-            (r) =>
-              r.name.toLowerCase().includes(searchFilter) ||
-              (r.request.method || "").toLowerCase().includes(searchFilter) ||
-              (r.request.url || "").toLowerCase().includes(searchFilter)
+      const filter = searchFilter?.toLowerCase();
+      const match = filter
+        ? col.requests.filter(r =>
+            r.name.toLowerCase().includes(filter) ||
+            (r.request.method || "").toLowerCase().includes(filter) ||
+            (r.request.url || "").toLowerCase().includes(filter)
           )
-        : collection.requests;
+        : col.requests;
 
-      if (searchFilter && !collection.name.toLowerCase().includes(searchFilter) && !filteredRequests.length) {
-        return;
-      }
+      if (filter && !col.name.toLowerCase().includes(filter) && !match.length) return;
 
-      const wrapper = document.createElement("div");
-      wrapper.className = "collection-item";
+      const wrap = document.createElement("div");
+      wrap.className = "collection-item";
 
-      const nameEl = document.createElement("div");
-      nameEl.className = `collection-name${isExpanded ? " expanded" : ""}`;
+      // Collection header row.
+      const hdr = document.createElement("div");
+      hdr.className = `collection-name${open ? " expanded" : ""}`;
+      hdr.innerHTML = `<span class="toggle-arrow">▶</span><span class="coll-name-text">${escapeHtml(col.name)}</span>
+        <button class="coll-add-req-btn" title="Add request">+</button>
+        <button class="coll-delete-btn" title="Delete collection">×</button>`;
+      hdr.querySelector(".toggle-arrow").after(hdr.querySelector(".coll-name-text"));
 
-      const toggleArrow = document.createElement("span");
-      toggleArrow.className = "toggle-arrow";
-      toggleArrow.textContent = "▶";
-      nameEl.appendChild(toggleArrow);
-
-      const nameSpan = document.createElement("span");
-      nameSpan.textContent = collection.name;
-      nameSpan.className = "coll-name-text";
-      nameEl.appendChild(nameSpan);
-
-      const addBtn = document.createElement("button");
-      addBtn.className = "coll-add-req-btn";
-      addBtn.textContent = "+";
-      addBtn.title = "Add request";
-      addBtn.addEventListener("click", (e) => {
+      hdr.querySelector(".coll-add-req-btn").addEventListener("click", e => {
         e.stopPropagation();
-        showNewRequestRow(wrapper, collection.id, searchFilter);
+        showNewRequestRow(wrap, col.id, searchFilter);
       });
-      nameEl.appendChild(addBtn);
-
-      const delBtn = document.createElement("button");
-      delBtn.className = "coll-delete-btn";
-      delBtn.textContent = "×";
-      delBtn.title = "Delete collection";
-      delBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        self.deleteCollection(collection.id);
+      hdr.querySelector(".coll-delete-btn").addEventListener("click", e => {
+        e.stopPropagation(); self.deleteCollection(col.id);
       });
-      nameEl.appendChild(delBtn);
 
-      nameSpan.addEventListener("dblclick", (e) => {
+      // Double-click to rename collection.
+      hdr.querySelector(".coll-name-text").addEventListener("dblclick", e => {
         e.stopPropagation();
-        const input = document.createElement("input");
-        input.className = "inline-rename-input";
-        input.value = collection.name;
-        nameSpan.replaceWith(input);
-        input.focus();
-        input.select();
-        const finish = () => {
-          const val = input.value.trim();
-          if (val && val !== collection.name) {
-            self.renameCollection(collection.id, val);
-            self.renderList(searchFilter);
-          } else {
-            self.renderList(searchFilter);
-          }
+        const inp = document.createElement("input");
+        inp.className = "inline-rename-input";
+        inp.value = col.name;
+        const span = e.target;
+        span.replaceWith(inp); inp.focus(); inp.select();
+        const done = () => {
+          const v = inp.value.trim();
+          if (v && v !== col.name) self.renameCollection(col.id, v);
+          self.renderList(searchFilter);
         };
-        input.addEventListener("blur", finish);
-        input.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") { e.preventDefault(); input.blur(); }
-          if (e.key === "Escape") { input.value = collection.name; input.blur(); }
+        inp.addEventListener("blur", done);
+        inp.addEventListener("keydown", e => {
+          if (e.key === "Enter") { e.preventDefault(); inp.blur(); }
+          if (e.key === "Escape") { inp.value = col.name; inp.blur(); }
         });
       });
 
-      nameEl.addEventListener("click", (e) => {
-        if (e.target.closest("button")) return;
-        if (e.target.closest("input")) return;
-        self.expandedState[collection.id] = !self.expandedState[collection.id];
+      hdr.addEventListener("click", e => {
+        if (e.target.closest("button, input")) return;
+        self.expanded[col.id] = !self.expanded[col.id];
         self.renderList(searchFilter);
       });
-      wrapper.appendChild(nameEl);
+      wrap.appendChild(hdr);
 
-      const newReqRow = document.createElement("div");
-      newReqRow.className = "inline-create-row";
-      newReqRow.style.display = "none";
-      newReqRow.innerHTML = `
-        <input type="text" class="new-req-name-input" placeholder="Request name" />
+      // Inline "new request" row (hidden by default).
+      const newRow = document.createElement("div");
+      newRow.className = "inline-create-row";
+      newRow.style.display = "none";
+      newRow.innerHTML = `<input type="text" class="new-req-name-input" placeholder="Request name" />
         <button class="btn-small btn-confirm">✓</button>
-        <button class="btn-small btn-cancel">✕</button>
-      `;
-      wrapper.appendChild(newReqRow);
+        <button class="btn-small btn-cancel">✕</button>`;
+      wrap.appendChild(newRow);
 
-      if (isExpanded) {
-        const requestsWrapper = document.createElement("div");
-        requestsWrapper.className = "collection-requests";
+      // Request list.
+      if (open) {
+        const rw = document.createElement("div");
+        rw.className = "collection-requests";
 
-        if (!filteredRequests.length) {
+        if (!match.length) {
           const empty = document.createElement("div");
           empty.className = "history-empty";
           empty.style.marginLeft = "12px";
-          empty.textContent = searchFilter ? "No matching requests." : "No saved requests yet.";
-          requestsWrapper.appendChild(empty);
+          empty.textContent = filter ? "No matching requests." : "No saved requests yet.";
+          rw.appendChild(empty);
         }
 
-        filteredRequests.forEach((savedReq) => {
-          const reqEl = document.createElement("div");
-          reqEl.className = "request-item";
-          const method = savedReq.request.method || "GET";
+        match.forEach(sr => {
+          const ri = document.createElement("div");
+          ri.className = "request-item";
+          ri.innerHTML = `<span class="method-badge method-${sr.request.method || "GET"}">${sr.request.method || "GET"}</span>
+            <span class="req-name-text">${escapeHtml(sr.name)}</span>
+            <button class="req-delete-btn" title="Delete request">×</button>`;
 
-          const badge = document.createElement("span");
-          badge.className = `method-badge method-${method}`;
-          badge.textContent = method;
-          reqEl.appendChild(badge);
-
-          const reqNameSpan = document.createElement("span");
-          reqNameSpan.textContent = savedReq.name;
-          reqNameSpan.className = "req-name-text";
-          reqEl.appendChild(reqNameSpan);
-
-          const reqDelBtn = document.createElement("button");
-          reqDelBtn.className = "req-delete-btn";
-          reqDelBtn.textContent = "×";
-          reqDelBtn.title = "Delete request";
-          reqDelBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            self.deleteRequest(collection.id, savedReq.id);
+          ri.querySelector(".req-delete-btn").addEventListener("click", e => {
+            e.stopPropagation(); self.deleteRequest(col.id, sr.id);
           });
-          reqEl.appendChild(reqDelBtn);
 
-          reqNameSpan.addEventListener("dblclick", (e) => {
+          // Double-click to rename request.
+          ri.querySelector(".req-name-text").addEventListener("dblclick", e => {
             e.stopPropagation();
-            const input = document.createElement("input");
-            input.className = "inline-rename-input";
-            input.value = savedReq.name;
-            reqNameSpan.replaceWith(input);
-            input.focus();
-            input.select();
-            const finish = () => {
-              const val = input.value.trim();
-              if (val && val !== savedReq.name) {
-                self.renameRequest(collection.id, savedReq.id, val);
-                self.renderList(searchFilter);
-              } else {
-                self.renderList(searchFilter);
-              }
+            const inp = document.createElement("input");
+            inp.className = "inline-rename-input";
+            inp.value = sr.name;
+            const span = e.target;
+            span.replaceWith(inp); inp.focus(); inp.select();
+            const done = () => {
+              const v = inp.value.trim();
+              if (v && v !== sr.name) self.renameRequest(col.id, sr.id, v);
+              self.renderList(searchFilter);
             };
-            input.addEventListener("blur", finish);
-            input.addEventListener("keydown", (e) => {
-              if (e.key === "Enter") { e.preventDefault(); input.blur(); }
-              if (e.key === "Escape") { input.value = savedReq.name; input.blur(); }
+            inp.addEventListener("blur", done);
+            inp.addEventListener("keydown", e => {
+              if (e.key === "Enter") { e.preventDefault(); inp.blur(); }
+              if (e.key === "Escape") { inp.value = sr.name; inp.blur(); }
             });
           });
 
-          reqEl.addEventListener("click", (e) => {
-            if (e.target.closest("button") || e.target.closest("input")) return;
-            if (typeof TabsManager !== "undefined") {
-              TabsManager.openTab(method, savedReq.name, savedReq.request);
-            } else {
-              RequestBuilder.loadRequest(savedReq.request);
-            }
+          ri.addEventListener("click", e => {
+            if (e.target.closest("button, input")) return;
+            TabsManager.openTab(sr.request.method || "GET", sr.name, sr.request);
           });
-          requestsWrapper.appendChild(reqEl);
+          rw.appendChild(ri);
         });
-
-        wrapper.appendChild(requestsWrapper);
+        wrap.appendChild(rw);
       }
-
-      container.appendChild(wrapper);
+      el.appendChild(wrap);
     });
   },
 };
 
-function showNewRequestRow(wrapper, collectionId, searchFilter) {
+// Collection search — just filters and re-renders.
+const CollectionSearch = {
+  init() {
+    document.getElementById("collectionSearch").addEventListener("input", e => {
+      Collections.renderList(e.target.value.trim().toLowerCase());
+    });
+  },
+};
+
+function showNewRequestRow(wrapper, colId, filter) {
   const row = wrapper.querySelector(".inline-create-row");
   if (!row) return;
   row.style.display = "flex";
-  const input = row.querySelector(".new-req-name-input");
-  const confirmBtn = row.querySelector(".btn-confirm");
-  const cancelBtn = row.querySelector(".btn-cancel");
-
-  input.value = "";
-  input.focus();
-
-  const confirm = () => {
-    const name = input.value.trim() || "New Request";
-    const emptyReq = { method: "GET", url: "", params: [], headers: [], bodyMode: "none", bodyRaw: "", bodyFields: [], auth: { type: "none" } };
-    Collections.addRequestToCollection(collectionId, name, emptyReq);
-    if (typeof TabsManager !== "undefined") {
-      TabsManager.openTab("GET", name, emptyReq);
-    }
+  const inp = row.querySelector(".new-req-name-input");
+  inp.value = ""; inp.focus();
+  const ok = () => {
+    const name = inp.value.trim() || "New Request";
+    const empty = { method: "GET", url: "", params: [], headers: [], bodyMode: "none", bodyRaw: "", bodyFields: [], auth: { type: "none" } };
+    Collections.addRequestToCollection(colId, name, empty);
+    TabsManager.openTab("GET", name, empty);
     row.style.display = "none";
-    Collections.renderList(searchFilter);
+    Collections.renderList(filter);
   };
-
-  const cancel = () => {
-    row.style.display = "none";
-  };
-
-  confirmBtn.onclick = confirm;
-  cancelBtn.onclick = cancel;
-  input.onkeydown = (e) => {
-    if (e.key === "Enter") confirm();
+  const cancel = () => { row.style.display = "none"; };
+  row.querySelector(".btn-confirm").onclick = ok;
+  row.querySelector(".btn-cancel").onclick = cancel;
+  inp.onkeydown = e => {
+    if (e.key === "Enter") ok();
     if (e.key === "Escape") cancel();
   };
 }
